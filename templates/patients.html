@@ -1,0 +1,188 @@
+<!-- templates/patients.html -->
+{% extends "base.html" %}
+{% block content %}
+<title>Patients</title>
+<style>
+    .content-container {
+        display: flex;
+        gap: 20px;
+        height: 700px;
+    }
+    .left-column, .right-column {
+        border: 1px solid #ccc;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+        height: 100%;
+        width: 50%;
+    }
+
+    h1, h2 {
+        margin-top: 0;
+    }
+
+    .patient-list-container {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        box-sizing: border-box;
+        margin-top: 10px;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top:10px;
+    }
+    table, th, td {
+        border:1px solid #ccc;
+    }
+    th, td {
+        padding:8px;
+        text-align:left;
+    }
+
+    .section {
+        margin-bottom: 20px;
+    }
+
+    .list-search-input {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="content-container">
+    <!-- Left Column -->
+    <div class="left-column">
+        <h1>Patient List</h1>
+        <input type="text" class="list-search-input" placeholder="Search by name..." />
+
+        <form method="post" action="/patients" style="margin-bottom:10px;">
+            <input type="hidden" name="action" value="show_add"/>
+            <button type="submit">Add Patient</button>
+        </form>
+
+        <div class="patient-list-container">
+            <table id="patient-table">
+                <tr>
+                    <th>Name</th><th>Actions</th>
+                </tr>
+                {% for patient in all_patients %}
+                <tr>
+                    <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                    <td>
+                        <form method="post" action="/patients" style="display:inline;">
+                            <input type="hidden" name="action" value="load_view"/>
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}"/>
+                            <button type="submit">View</button>
+                        </form>
+                        <form method="post" action="/patients" style="display:inline;">
+                            <input type="hidden" name="action" value="load_edit"/>
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}"/>
+                            <button type="submit">Edit</button>
+                        </form>
+                        <!-- Remove Button -->
+                        <form method="post" action="/patients" style="display:inline;">
+                            <input type="hidden" name="action" value="remove"/>
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}"/>
+                            <button type="submit" style="background-color:#f66;">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="right-column">
+        {% if current_action == 'add' %}
+            <div class="section">
+                <h2>Add New Patient</h2>
+                <form method="post" action="/patients">
+                    <input type="hidden" name="action" value="add"/>
+                    <label>First Name:<br><input type="text" name="first_name" required></label><br><br>
+                    <label>Last Name:<br><input type="text" name="last_name" required></label><br><br>
+                    <label>Date of Birth (YYYY-MM-DD):<br><input type="text" name="dob" required></label><br><br>
+                    <label>Email:<br><input type="email" name="email" required></label><br><br>
+                    <label>Address:<br><input type="text" name="address" required></label><br><br>
+                    <label>Gender:<br>
+                        <select name="gender" required>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </label><br><br>
+                    <button type="submit">Add Patient</button>
+                </form>
+                <form method="post" action="/patients" style="margin-top:10px;">
+                    <input type="hidden" name="action" value="cancel_add"/>
+                    <button type="submit" style="background-color:#ddd;">Cancel</button>
+                </form>
+            </div>
+        {% elif current_action == 'edit' and edit_patient %}
+            <div class="section">
+                <h2>Edit Patient ID: {{ edit_patient.id }}</h2>
+                <form method="post" action="/patients">
+                    <input type="hidden" name="action" value="edit"/>
+                    <input type="hidden" name="patient_id" value="{{ edit_patient.id }}"/>
+                    <label>First Name:<br><input type="text" name="first_name" value="{{ edit_patient.first_name }}" required></label><br><br>
+                    <label>Last Name:<br><input type="text" name="last_name" value="{{ edit_patient.last_name }}" required></label><br><br>
+                    <label>Date of Birth (YYYY-MM-DD):<br><input type="text" name="dob" value="{{ edit_patient.dob }}" required></label><br><br>
+                    <label>Email:<br><input type="email" name="email" value="{{ edit_patient.email }}" required></label><br><br>
+                    <label>Address:<br><input type="text" name="address" value="{{ edit_patient.address }}" required></label><br><br>
+                    <label>Gender:<br>
+                        <select name="gender">
+                            <option value="Male" {% if edit_patient.gender == 'Male' %}selected{% endif %}>Male</option>
+                            <option value="Female" {% if edit_patient.gender == 'Female' %}selected{% endif %}>Female</option>
+                            <option value="Other" {% if edit_patient.gender == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </label><br><br>
+                    <button type="submit">Update Patient</button>
+                </form>
+                <form method="post" action="/patients" style="margin-top:10px;">
+                    <input type="hidden" name="action" value="cancel_edit"/>
+                    <button type="submit" style="background-color:#ddd;">Cancel</button>
+                </form>
+            </div>
+        {% elif current_action == 'view' and view_patient %}
+            <div class="section">
+                <h2>View Patient ID: {{ view_patient.id }}</h2>
+                <p><strong>Name:</strong> {{ view_patient.first_name }} {{ view_patient.last_name }}</p>
+                <p><strong>Date of Birth:</strong> {{ view_patient.dob }}</p>
+                <p><strong>Email:</strong> {{ view_patient.email }}</p>
+                <p><strong>Address:</strong> {{ view_patient.address }}</p>
+                <p><strong>Gender:</strong> {{ view_patient.gender }}</p>
+                <form method="post" action="/patients" style="margin-top:10px;">
+                    <input type="hidden" name="action" value="cancel_view"/>
+                    <button type="submit" style="background-color:#ddd;">Close</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    const searchInput = document.querySelector('.list-search-input');
+    const patientTable = document.getElementById('patient-table');
+
+    searchInput.addEventListener('input', function() {
+        const filterText = this.value.toLowerCase().trim();
+        const rows = patientTable.querySelectorAll('tr:not(:first-child)');
+
+        rows.forEach(row => {
+            const nameCell = row.querySelectorAll('td')[0].textContent.toLowerCase();
+            if (nameCell.includes(filterText)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,190 @@
+<!-- templates/prescriptions.html -->
+{% extends "base.html" %}
+{% block content %}
+<title>Prescriptions</title>
+<style>
+    .content-container {
+        display: flex;
+        gap: 20px;
+        height: 700px;
+    }
+
+    .left-column, .right-column {
+        width: 50%;
+        border: 1px solid #ccc;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+        height: 100%;
+    }
+
+    h1, h2 {
+        margin-top: 0;
+    }
+
+    .patient-list-container {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        box-sizing: border-box;
+        margin-top: 10px;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top:10px;
+    }
+    table, th, td {
+        border:1px solid #ccc;
+    }
+    th, td {
+        padding:8px;
+        text-align:left;
+    }
+
+    .section {
+        margin-bottom: 20px;
+    }
+
+    .list-search-input {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="content-container">
+    <!-- Left Column: Patients List with Search and 'View Prescriptions' button -->
+    <div class="left-column">
+        <h1>Patients</h1>
+        <input type="text" class="list-search-input" placeholder="Search by name..." />
+
+        <div class="patient-list-container">
+            <table id="patient-table">
+                <tr>
+                    <th>Name</th><th>Actions</th>
+                </tr>
+                {% for patient in all_patients %}
+                <tr>
+                    <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                    <td>
+                        <form method="post" action="/prescriptions" style="display:inline;">
+                            <input type="hidden" name="action" value="load_prescriptions"/>
+                            <input type="hidden" name="patient_id" value="{{ patient.id }}"/>
+                            <button type="submit">View Prescriptions</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+
+    <!-- Right Column: Shows Prescriptions, Add Prescription Form, or Edit Prescription Form -->
+    <div class="right-column">
+        {% if current_action == 'view_prescriptions' and current_patient_id %}
+            <h2>Prescriptions</h2>
+            <form method="post" action="/prescriptions" style="margin-bottom:10px;">
+                <input type="hidden" name="action" value="add_prescription"/>
+                <input type="hidden" name="patient_id" value="{{ current_patient_id }}"/>
+                <button type="submit">Add Prescription</button>
+            </form>
+
+            {% if current_patient_prescriptions %}
+                <table>
+                    <tr>
+                        <th>Drug</th><th>Dosage</th><th>Start Date</th><th>End Date</th><th>Notes</th><th>Actions</th>
+                    </tr>
+                    {% for rx in current_patient_prescriptions %}
+                    <tr>
+                        <td>{{ rx.drug_name }}</td>
+                        <td>{{ rx.dosage }}</td>
+                        <td>{{ rx.start_date }}</td>
+                        <td>{{ rx.end_date }}</td>
+                        <td>{{ rx.notes }}</td>
+                        <td>
+                            <!-- Edit Prescription -->
+                            <form method="post" action="/prescriptions" style="display:inline;">
+                                <input type="hidden" name="action" value="load_edit"/>
+                                <input type="hidden" name="prescription_id" value="{{ rx.id }}"/>
+                                <input type="hidden" name="patient_id" value="{{ current_patient_id }}"/>
+                                <button type="submit">Edit</button>
+                            </form>
+                            <!-- Remove Prescription -->
+                            <form method="post" action="/prescriptions" style="display:inline;">
+                                <input type="hidden" name="action" value="remove"/>
+                                <input type="hidden" name="prescription_id" value="{{ rx.id }}"/>
+                                <input type="hidden" name="patient_id" value="{{ current_patient_id }}"/>
+                                <button type="submit" style="background-color:#f66;">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>No prescriptions found for this patient.</p>
+            {% endif %}
+
+        {% elif current_action == 'add_prescription' and current_patient_id %}
+            <h2>Add Prescription</h2>
+            <form method="post" action="/prescriptions">
+                <input type="hidden" name="action" value="insert_prescription"/>
+                <input type="hidden" name="patient_id" value="{{ current_patient_id }}"/>
+                <label>Drug Name:<br><input type="text" name="drug_name" required></label><br><br>
+                <label>Dosage:<br><input type="text" name="dosage" required></label><br><br>
+                <label>Start Date (YYYY-MM-DD):<br><input type="text" name="start_date" required></label><br><br>
+                <label>End Date (YYYY-MM-DD):<br><input type="text" name="end_date" required></label><br><br>
+                <label>Notes:<br><textarea name="notes"></textarea></label><br><br>
+                <button type="submit">Add Prescription</button>
+            </form>
+            <form method="post" action="/prescriptions" style="margin-top:10px;">
+                <input type="hidden" name="action" value="cancel_add_prescription"/>
+                <input type="hidden" name="patient_id" value="{{ current_patient_id }}"/>
+                <button type="submit" style="background-color:#ddd;">Cancel</button>
+            </form>
+
+        {% elif current_action == 'edit' and edit_prescription %}
+            <h2>Edit Prescription ID: {{ edit_prescription.id }}</h2>
+            <form method="post" action="/prescriptions">
+                <input type="hidden" name="action" value="edit_prescription"/>
+                <input type="hidden" name="prescription_id" value="{{ edit_prescription.id }}"/>
+                <input type="hidden" name="patient_id" value="{{ current_patient_id }}"/>
+                <label>Drug Name:<br><input type="text" name="drug_name" value="{{ edit_prescription.drug_name }}" required></label><br><br>
+                <label>Dosage:<br><input type="text" name="dosage" value="{{ edit_prescription.dosage }}" required></label><br><br>
+                <label>Start Date (YYYY-MM-DD):<br><input type="text" name="start_date" value="{{ edit_prescription.start_date }}" required></label><br><br>
+                <label>End Date (YYYY-MM-DD):<br><input type="text" name="end_date" value="{{ edit_prescription.end_date }}" required></label><br><br>
+                <label>Notes:<br><textarea name="notes">{{ edit_prescription.notes }}</textarea></label><br><br>
+                <button type="submit">Update Prescription</button>
+            </form>
+            <form method="post" action="/prescriptions" style="margin-top:10px;">
+                <input type="hidden" name="action" value="cancel_edit"/>
+                <input type="hidden" name="patient_id" value="{{ current_patient_id }}"/>
+                <button type="submit" style="background-color:#ddd;">Cancel</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    const searchInput = document.querySelector('.list-search-input');
+    const patientTable = document.getElementById('patient-table');
+
+    searchInput.addEventListener('input', function() {
+        const filterText = this.value.toLowerCase().trim();
+        const rows = patientTable.querySelectorAll('tr:not(:first-child)');
+
+        rows.forEach(row => {
+            const nameCell = row.querySelectorAll('td')[0].textContent.toLowerCase();
+            if (nameCell.includes(filterText)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}
